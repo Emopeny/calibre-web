@@ -840,9 +840,39 @@ def _cover_referer_headers(url):
     return {}
 
 
+
+# <cover-url-proxy-save-patch>
+# 站内封面代理地址 -> 内层绝对 URL。见 patch_cover_url_proxy_save.py 顶部说明。
+def _unwrap_local_cover_proxy_url(url):
+    if not isinstance(url, str):
+        return url
+    candidate = url.strip()
+    try:
+        from urllib.parse import urlsplit, parse_qs, unquote
+
+        parts = urlsplit(candidate)
+        if parts.scheme or parts.netloc:
+            return candidate
+        if parts.path.rstrip("/") != "/metadata/cover":
+            return candidate
+        query = parts.query
+        inner = ""
+        if query.startswith("url="):
+            # 不截断: 内层 URL 自带 & 参数时, parse_qs 会把尾巴吃掉
+            inner = unquote(query[4:]).strip()
+        else:
+            inner = parse_qs(query).get("url", [""])[0].strip()
+        if inner.startswith(("http://", "https://")):
+            log.warning("cover_url was a local preview-proxy path, using inner url: %s", inner)
+            return inner
+    except Exception as exc:
+        log.debug("could not unwrap local cover proxy url %r: %s", candidate, exc)
+    return candidate
+
 # saves book cover from url
 def save_cover_from_url(url, book_path):
     try:
+        url = _unwrap_local_cover_proxy_url(url)
         if cli_param.allow_localhost:
             img = requests.get(url, timeout=(10, 200), allow_redirects=False, headers=_cover_referer_headers(url))  # ToDo: Error Handling
         elif use_advocate:
@@ -855,6 +885,10 @@ def save_cover_from_url(url, book_path):
     except (socket.gaierror,
             requests.exceptions.HTTPError,
             requests.exceptions.InvalidURL,
+            # 相对/畸形 URL 走的是这两个异常 (实测): '/metadata/cover?url=..' -> InvalidSchema,
+            # '/metadata/cover' -> MissingSchema; 上游都没 catch, 会让整个保存请求 500
+            requests.exceptions.InvalidSchema,
+            requests.exceptions.MissingSchema,
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout) as ex:
         # "Invalid host" can be the result of a redirect response
