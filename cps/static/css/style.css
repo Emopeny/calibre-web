@@ -500,3 +500,15 @@ body > div.container-fluid > div.row-fluid > div.col-sm-2::-webkit-scrollbar {
 body > div.container-fluid  {
   padding-right: 0px;
 }
+
+
+/* [local patch] 移动端侧栏位移修复 (2026-09-29)
+   intention.js 在视口 <510px 时把 #scnd-nav 搬进汉堡菜单，侧栏列随即塌陷 89px，
+   造成首屏布局位移（手机热缓存实测 CLS 0.0846）。同一断点下从一开始就不渲染它，
+   与搬走后的最终状态一致。
+   ⚠️ 断点 509px 必须与 cps/static/js/libs/context.min.js 的 mobile 上下文一致
+      （standard 840 / tablet 510 / mobile <510）。写成 767/768 会让
+      510–839px 区间（导航本应留在侧栏）的菜单消失。 */
+@media (max-width: 509px) {
+  .row-fluid > .col-sm-2 > nav.navigation { display: none; }
+}
