@@ -824,13 +824,29 @@ def get_series_thumbnail(series_id, resolution):
         .first())
 
 
+def _cover_referer_headers(url):
+    """按主机给出 Referer, 绕过 Douban 图床等站点的防盗链 (无 Referer 会 418)。
+    # <cover-referer-patch>"""
+    try:
+        from urllib.parse import urlsplit
+        parts = urlsplit(url)
+        host = (parts.netloc or "").lower()
+        if parts.scheme and host:
+            if host.endswith("doubanio.com") or host.endswith("douban.com"):
+                return {"Referer": "https://book.douban.com/"}
+            return {"Referer": "{0}://{1}/".format(parts.scheme, parts.netloc)}
+    except Exception:
+        pass
+    return {}
+
+
 # saves book cover from url
 def save_cover_from_url(url, book_path):
     try:
         if cli_param.allow_localhost:
-            img = requests.get(url, timeout=(10, 200), allow_redirects=False)  # ToDo: Error Handling
+            img = requests.get(url, timeout=(10, 200), allow_redirects=False, headers=_cover_referer_headers(url))  # ToDo: Error Handling
         elif use_advocate:
-            img = cw_advocate.get(url, timeout=(10, 200), allow_redirects=False)      # ToDo: Error Handling
+            img = cw_advocate.get(url, timeout=(10, 200), allow_redirects=False, headers=_cover_referer_headers(url))      # ToDo: Error Handling
         else:
             log.error("python module advocate is not installed but is needed")
             return False, _("Python module 'advocate' is not installed but is needed for cover uploads")
