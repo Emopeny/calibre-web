@@ -263,11 +263,13 @@
 
 {% block js %}
 <script type="text/template" id="template-book-result">
+  <!-- <metadata-cover-proxy-patch> -->
+  <!-- 缩略图走服务端代理 (cover_preview); data.cover 保持绝对 URL, 供表单保存。-->
   <li class="media" data-related="<%- source.id %>">
     <img class="pull-left img-responsive"
          data-toggle="modal"
          data-target="#metaModal"
-         src="<%- cover || '{{ url_for('static', filename='img/academicpaper.svg') }}' %>"
+         src="<%- cover_preview || cover || '{{ url_for('static', filename='img/academicpaper.svg') }}' %>"
          alt="Cover"
     >
     <div class="media-body">

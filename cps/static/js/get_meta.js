@@ -48,7 +48,9 @@ $(function () {
         $("#languages").val(uniqueLanguages.join(", "));
         $("#rating").data("rating").setValue(Math.round(book.rating));
         if(book.cover && $("#cover_url").length){
-            $(".cover img").attr("src", book.cover);
+            // <metadata-cover-proxy-patch>
+            // 预览用同源代理; 表单 cover_url 仍旧是绝对 URL (下一行)。
+            $(".cover img").attr("src", book.cover_preview || book.cover);
             $("#cover_url").val(book.cover);
         }
         $("#pubdate").val(book.publishedDate);
